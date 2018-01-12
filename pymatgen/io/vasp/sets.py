@@ -1262,7 +1262,7 @@ class MVLSlabSet(MPRelaxSet):
         self.auto_dipole = auto_dipole
         self.kwargs = kwargs
 
-        slab_incar = {"EDIFF": 1e-6, "EDIFFG": -0.01, "ENCUT": 400,
+        slab_incar = {"EDIFF": 1e-4, "EDIFFG": -0.01, "ENCUT": 400,
                       "ISMEAR": 0, "SIGMA": 0.05, "ISIF": 3}
         if not self.bulk:
             slab_incar["ISIF"] = 2
@@ -1606,7 +1606,7 @@ class MVLScanRelaxSet(MPRelaxSet):
     Appropriately Normed (SCAN) semilocal density functional.
     """
 
-    def __init__(self, structure, **kwargs):
+    def __init__(self, structure, potcar_functional="PBE_52", **kwargs):
         """
         Notes:
             1. This functional is only available from VASP.5.4.3 upwards.
@@ -1629,11 +1629,12 @@ class MVLScanRelaxSet(MPRelaxSet):
                 with the rVV10 non-local correlation functional.
             \\*\\*kwargs: Other kwargs supported by :class:`DictSet`.
         """
-        if kwargs.get("potcar_functional") not in ["PBE_52", "PBE_54"]:
-            kwargs["potcar_functional"] = "PBE_52"
-            warnings.warn("Set potcar_functional to \"PBE_52\".")
+        if potcar_functional not in ["PBE_52", "PBE_54"]:
+            raise ValueError("SCAN calculations required PBE_52 or PBE_54!")
 
-        super(MVLScanRelaxSet, self).__init__(structure, **kwargs)
+        super(MVLScanRelaxSet, self).__init__(
+            structure, potcar_functional=potcar_functional,
+            **kwargs)
 
         self._config_dict["INCAR"].update({"ADDGRID": True,
                                            "EDIFF": 1e-05,

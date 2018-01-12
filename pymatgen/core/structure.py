@@ -359,7 +359,8 @@ class IStructure(SiteCollection, MSONable):
                     disordered structures.
             coords (Nx3 array): list of fractional/cartesian coordinates of
                 each species.
-            charge (int): overall charge of the structure. Defaults to behavior in SiteCollection where total charge is the sum of the oxidation states
+            charge (int): overall charge of the structure. Defaults to behavior
+                in SiteCollection where total charge is the sum of the oxidation states
             validate_proximity (bool): Whether to check if there are sites
                 that are less than 0.01 Ang apart. Defaults to False.
             coords_are_cartesian (bool): Set to True if you are providing
@@ -1164,7 +1165,8 @@ class IStructure(SiteCollection, MSONable):
                                           site_properties=self.site_properties))
         return structs
 
-    def get_primitive_structure(self, tolerance=0.25, use_site_props=False):
+    def get_primitive_structure(self, tolerance=0.25, use_site_props=False,
+                                constrain_latt=[False, False, False, False, False, False]):
         """
         This finds a smaller unit cell than the input. Sometimes it doesn"t
         find the smallest possible one, so this method is recursively called
@@ -1180,6 +1182,9 @@ class IStructure(SiteCollection, MSONable):
                 as [0, 0, 0] for a tolerance of 0.25. Defaults to 0.25.
             use_site_props (bool): Whether to account for site properties in
                 differntiating sites.
+            constrain_latt (list of bools): Determines which lattice constant
+                we want to preserve (True), if any. Order of bools in the list
+                corresponds to [a, b, c, alpha, beta, gamme].
 
         Returns:
             The most primitive structure found.
@@ -1338,9 +1343,21 @@ class IStructure(SiteCollection, MSONable):
                                   site_properties=new_props,
                                   coords_are_cartesian=False)
 
-                    return s.get_primitive_structure(
-                        tolerance=tolerance, use_site_props=use_site_props
+                    # Default behavior
+                    p = s.get_primitive_structure(
+                        tolerance=tolerance, use_site_props=use_site_props,
+                        constrain_latt=constrain_latt
                     ).get_reduced_structure()
+                    if not any(constrain_latt):
+                        return p
+
+                    # Only return primitive structures that
+                    # satisfy the restriction condition
+                    p_l, s_l = p.lattice, self.lattice
+                    p_latt = [p_l.a, p_l.b, p_l.c, p_l.alpha, p_l.beta, p_l.gamma]
+                    s_latt = [s_l.a, s_l.b, s_l.c, s_l.alpha, s_l.beta, s_l.gamma]
+                    if all([p_latt[i] == s_latt[i] for i, b in enumerate(constrain_latt) if b]):
+                        return p
 
         return self.copy()
 
@@ -2790,15 +2807,15 @@ class Structure(IStructure, collections.MutableSequence):
                                     properties=site.properties)
             self._sites[i] = new_site
 
-    def add_oxidation_state_by_guess(self, *kwargs):
+    def add_oxidation_state_by_guess(self, **kwargs):
         """
         Decorates the structure with oxidation state, guessing
         using Composition.oxi_state_guesses()
 
         Args:
-            *kwargs: parameters to pass into oxi_state_guesses()
+            **kwargs: parameters to pass into oxi_state_guesses()
         """
-        oxid_guess = self.composition.oxi_state_guesses(*kwargs)
+        oxid_guess = self.composition.oxi_state_guesses(**kwargs)
         oxid_guess = oxid_guess or \
                      [dict([(e.symbol, 0) for e in self.composition])]
         self.add_oxidation_state_by_element(oxid_guess[0])
