@@ -1,8 +1,8 @@
 Change log
 ==========
 
-v2018.1.29
+v2018.3.13
 ----------
-* Improvements to local_env (Nils)
-* Term symbols for Element (Weike Ye).
-* Timeout for enumlib (Horton).
+* Support for VESTA lattice vector definitions. 
+* GaussianOutput read now bond_orders of a NBO calculations (@gVallverdu)
+* Bug fixes to phonons, abinit support.
